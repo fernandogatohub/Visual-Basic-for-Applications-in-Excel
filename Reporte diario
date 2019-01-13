@@ -1,0 +1,763 @@
+'DEFINICIÓN DE VARIABLES Y OBJETOS
+    
+    'Números enteros
+    Dim columfecha As Integer
+    Dim x As Integer
+    Dim y As Integer
+    Dim z As Integer
+    Dim i As Integer
+    Dim primaefo As Integer
+    Dim ultimaefo As Integer
+    Dim columnex As Integer
+    Dim filex As Integer
+    
+    'Rangos
+    Dim rng As Range
+    Dim CeldaLugar As Range
+    Dim CeldaCierreCI As Range
+    Dim CeldaIDReparacion As Range
+    Dim rng1, rng2 As Range
+    
+    'Tablas dinámicas
+    Dim PorCliente As PivotTable
+    Dim PorServicio As PivotTable
+    Dim TkGenerados As PivotTable
+    Dim TkAtendidosDia As PivotTable
+    Dim TkAtendidosDiasAnt As PivotTable
+    Dim TkSinAtender As PivotTable
+    Dim TotalAtenciones As PivotTable
+    Dim NETOP As PivotTable
+    Dim DetalleSinAtender As PivotTable
+    Dim Pendientes As PivotTable
+    Dim ErrorDisp As PivotTable
+    Dim Provincia1 As PivotTable
+    Dim Provincia2 As PivotTable
+    Dim Lima1 As PivotTable
+    Dim Limas2 As PivotTable
+    Dim pivT As PivotTable
+    Dim pivI As PivotItem
+    
+    'Fechas
+    Dim thedate As Date
+    
+    'Arrays
+    Dim fgeneracion(1 To 10000) As Date
+    Dim fefectiva(1 To 10000) As Date
+    Dim fapertura(1 To 10000) As Date
+    Dim atencion(1 To 10000) As Date
+    Dim generacion(1 To 10000) As Date
+    
+    
+Sub preparar()
+    
+    Sheets("DATA SERVICIOS").Select
+    
+    Range(Range("Identificador_ultimaefo"), Range("CELDA_CIERRE_CI")).Select
+    Selection.AutoFilter
+    
+    Range("B1:B2").ClearContents
+    Range("D1").ClearContents
+    Range("F1:F2").ClearContents
+    Range("H1").ClearContents
+    
+    Range("Identificador_ultimaefo").Offset(1, 0).Select
+    Set rng1 = ActiveCell
+    Range("Identificador_ultimaefo").End(xlDown).Select
+    If ActiveCell = Empty Then
+        filex = 6
+    Else
+        filex = ActiveCell.Row
+    End If
+    columnex = Range("Tiempo_espera").Column
+    Set rng2 = Cells(filex, columnex)
+    Range(rng1, rng2).Clear
+    
+    Range("CELDA_LUGAR").Offset(2, 0).Select
+    Set rng1 = ActiveCell
+    Range("CELDA_CIERRE_CI").End(xlDown).Select
+    If ActiveCell.Row < rng1.Row Then
+        GoTo Line1
+    Else
+        Set rng2 = ActiveCell
+        Range(rng1, rng2).Clear
+    End If
+    
+Line1:
+    Range("CELDA_LUGAR").Offset(1, 1).Select
+    Set rng1 = ActiveCell
+    Range("CELDA_CSE").Offset(1, -1).Select
+    Set rng2 = ActiveCell
+    Range(rng1, rng2).ClearContents
+    
+    Sheets("GENERAL").Range("FECHA_EVALUADA") = CDate(InputBox("Fecha del reporte"))
+    Sheets("Comportamiento").Range("F_E_Comportamiento") = Sheets("GENERAL").Range("FECHA_EVALUADA").Value
+    
+End Sub
+Sub CuadrarTablas()
+
+    Sheets("DATA SERVICIOS").Select
+    
+    'definición de primaefo y ultimaefo
+    Range("Identificador_primaefo").Select
+    ActiveCell.End(xlDown).Select
+    primaefo = ActiveCell.Offset(1, 0).Row
+    
+    Range("Identificador_ultimaefo").Select
+    ActiveCell.End(xlDown).Select
+    ultimaefo = ActiveCell.Row
+        
+    'primaefo 1 en B1
+    [b1] = primaefo
+    'ultimaefo 1 en f1
+    [f1] = ultimaefo
+    
+    'pintado de EFO
+    Range(Cells(primaefo, 1), Cells(ultimaefo, 80)).Interior.Color = RGB(255, 255, 175)
+    
+    'Cuadre de rangos
+    Range(Cells(primaefo, 30), Cells(ultimaefo, 31)).Value = Empty
+    Range(Cells(primaefo, 63), Cells(ultimaefo, 74)).Cut Range(Cells(primaefo, 64), Cells(ultimaefo, 75))
+    Range(Cells(primaefo, 23), Cells(ultimaefo, 29)).Cut Range(Cells(primaefo, 25), Cells(ultimaefo, 31))
+    Range(Cells(primaefo, 3), Cells(ultimaefo, 22)).Cut Range(Cells(primaefo, 4), Cells(ultimaefo, 23))
+    Range(Cells(primaefo, 62), Cells(ultimaefo, 62)).Cut Range(Cells(primaefo, 63), Cells(ultimaefo, 63))
+    Range(Cells(primaefo, 10), Cells(ultimaefo, 10)).Cut Range(Cells(primaefo, 9), Cells(ultimaefo, 9))
+    
+    'Eliminar duplicados
+    Range("idReparacion").Offset(1, 0).Select
+    Do While Not IsEmpty(ActiveCell)
+        x = WorksheetFunction.CountIf(Range("AF:AF"), ActiveCell)
+        If x > 1 Then
+            ActiveCell.EntireRow.Delete
+        Else
+            ActiveCell.Offset(1, 0).Select
+        End If
+    Loop
+    
+    'primaefo 2 en celda d1
+    Range("Identificador_primaefo2").Select
+    ActiveCell.End(xlDown).Select
+    primaefo = ActiveCell.Offset(1, 0).Row
+    [d1] = primaefo
+    
+    'ultimaefo 2 en celda H1
+    Range("Identificador_ultimaefo").Select
+    ActiveCell.End(xlDown).Select
+    ultimaefo = ActiveCell.Row
+    [h1] = ultimaefo
+    
+    'Para corregir el problema con las fechas que no son fechas
+    
+    x = Range("FechaGeneracionTicket").Column
+    y = Range("FechaEfectiva").Column
+    z = Range("FECHA_APERTURA_REPARACION").Column
+    
+    filex = Range("Identificador_ultimaefo").Row
+    For i = 1 To ultimaefo - filex
+        fgeneracion(i + filex) = Cells(i + filex, x).Value
+        fefectiva(i + filex) = Cells(i + filex, y).Value
+        fapertura(i + filex) = Cells(i + filex, z).Value
+    Next
+    
+    For i = 1 To ultimaefo - filex
+        Cells(i + filex, x).Value = CDate(fgeneracion(i + filex) + 0)
+        Cells(i + filex, y).Value = CDate(fefectiva(i + filex) + 0)
+        Cells(i + filex, z).Value = CDate(fapertura(i + filex) + 0)
+    Next
+    
+    'Para jalar las formulas hasta el final
+    Range("CELDA_LUGAR").Offset(1, 0).Select
+    Set CeldaLugar = ActiveCell
+    Range("CELDA_CIERRE_CI").Offset(1, 0).Select
+    Set CeldaCierreCI = ActiveCell
+    
+    For Each rng In Range(CeldaLugar, CeldaCierreCI)
+        rng.Copy
+        Range(Cells(rng.Row + 1, rng.Column), Cells(ultimaefo, rng.Column)).PasteSpecial xlPasteAll
+        Application.CutCopyMode = False
+    Next
+    
+    'para eliminar los innecesios
+    
+    thedate = Sheets("GENERAL").Range("FECHA_EVALUADA").Value
+    
+    x = Range("CELDA_FECHA_ATENCION").Column
+    y = Range("CELDA_FECHA_GENERACION").Column
+    z = Range("CHECK").Column
+    
+    For i = 1 To ultimaefo - filex
+        atencion(i + filex) = Cells(i + filex, x).Value
+        generacion(i + filex) = Cells(i + filex, y).Value
+    Next i
+         
+    For i = 1 To ultimaefo - filex
+        If atencion(i + filex) = 0 / 1 / 1900 Then
+            Cells(i + filex, x).Value = "=AD" & i + filex
+        End If
+    Next i
+     
+    For i = 1 To ultimaefo - filex
+        If atencion(i + filex) = thedate Then
+            Cells(i + filex, z).Value = "CHECK"
+        End If
+    Next i
+    
+    For i = 1 To ultimaefo - filex
+        If generacion(i + filex) = thedate Then
+            Cells(i + filex, z).Value = "CHECK"
+        End If
+    Next i
+    
+End Sub
+
+Sub DeleteUnnecessary()
+    
+    ultimaefo = Range("H1").Value
+    thedate = Sheets("GENERAL").Range("b1").Value
+    
+    For i = 1 To ultimaefo - 5
+        atencion(i + 5) = Cells(i + 5, 90).Value
+        generacion(i + 5) = Cells(i + 5, 89).Value
+    Next i
+         
+    For i = 1 To ultimaefo - 5
+        If atencion(i + 5) = 0 / 1 / 1900 Then
+            Cells(i + 5, 90).Value = "=AD" & i + 5
+        End If
+    Next i
+     
+    For i = 1 To ultimaefo - 5
+        If atencion(i + 5) = thedate Then
+            Cells(i + 5, 84).Value = "CHECK"
+        End If
+    Next i
+    
+    For i = 1 To ultimaefo - 5
+        If generacion(i + 5) = thedate Then
+            Cells(i + 5, 84).Value = "CHECK"
+        End If
+    Next i
+
+     
+End Sub
+
+Sub ActualizarTablas()
+
+    thedate = Sheets("GENERAL").Range("b1").Value
+    
+    Set PorCliente = Sheets("Comportamiento").PivotTables("ATENCIONES POR CLIENTE")
+    Set PorServicio = Sheets("Comportamiento").PivotTables("ATENCIONES POR SERVICIO")
+    Set TkGenerados = Sheets("GENERAL").PivotTables("TK GENERADOS")
+    Set TkAtendidosDia = Sheets("GENERAL").PivotTables("TK ATENDIDOS DEL DIA")
+    Set TkAtendidosDiasAnt = Sheets("GENERAL").PivotTables("TK ATENDIDOS DE DIAS ANTERIORES")
+    Set TkSinAtender = Sheets("GENERAL").PivotTables("TK SIN ATENDER")
+    Set TotalAtenciones = Sheets("GENERAL").PivotTables("TOTAL DE ATENCIONES")
+    Set NETOP = Sheets("GENERAL").PivotTables("NETOP")
+    Set DetalleSinAtender = Sheets("GENERAL").PivotTables("DETALLE SIN ATENDER")
+    Set Pendientes = Sheets("Pendientes").PivotTables("PENDIENTES")
+    Set ErrorDisp = Sheets("GENERAL").PivotTables("ERROR DE DISPOSITIVO")
+    Set Provincia1 = Sheets("PROVINCIA").PivotTables("PROVINCIA 1")
+    Set Provincia2 = Sheets("PROVINCIA").PivotTables("PROVINCIA 2")
+    Set Lima1 = Sheets("LIMA").PivotTables("LIMA 1")
+    Set Lima2 = Sheets("LIMA").PivotTables("LIMA 2")
+    
+    'PRIMERO SE ACTUALIZA LA DATA SOURCE
+    'Hoja comportamiento
+    
+    PorCliente.ChangePivotCache ActiveWorkbook. _
+        PivotCaches.Create(SourceType:=xlDatabase, SourceData:="data", Version:= _
+        xlPivotTableVersion15)
+        
+    PorServicio.ChangePivotCache ActiveWorkbook. _
+        PivotCaches.Create(SourceType:=xlDatabase, SourceData:="data", Version:= _
+        xlPivotTableVersion15)
+            
+    'Hoja general
+    
+    TkGenerados.ChangePivotCache ActiveWorkbook. _
+        PivotCaches.Create(SourceType:=xlDatabase, SourceData:="data", Version:= _
+        xlPivotTableVersion15)
+    
+    TkAtendidosDia.ChangePivotCache ActiveWorkbook. _
+        PivotCaches.Create(SourceType:=xlDatabase, SourceData:="data", Version:= _
+        xlPivotTableVersion15)
+        
+    TkAtendidosDiasAnt.ChangePivotCache ActiveWorkbook. _
+        PivotCaches.Create(SourceType:=xlDatabase, SourceData:="data", Version:= _
+        xlPivotTableVersion15)
+        
+    TkSinAtender.ChangePivotCache ActiveWorkbook. _
+        PivotCaches.Create(SourceType:=xlDatabase, SourceData:="data", Version:= _
+        xlPivotTableVersion15)
+        
+    TotalAtenciones.ChangePivotCache ActiveWorkbook. _
+        PivotCaches.Create(SourceType:=xlDatabase, SourceData:="data", Version:= _
+        xlPivotTableVersion15)
+        
+    NETOP.ChangePivotCache ActiveWorkbook. _
+        PivotCaches.Create(SourceType:=xlDatabase, SourceData:="data", Version:= _
+        xlPivotTableVersion15)
+        
+    DetalleSinAtender.ChangePivotCache ActiveWorkbook. _
+        PivotCaches.Create(SourceType:=xlDatabase, SourceData:="data", Version:= _
+        xlPivotTableVersion15)
+        
+    Pendientes.ChangePivotCache ActiveWorkbook. _
+        PivotCaches.Create(SourceType:=xlDatabase, SourceData:="data", Version:= _
+        xlPivotTableVersion15)
+        
+    ErrorDisp.ChangePivotCache ActiveWorkbook. _
+        PivotCaches.Create(SourceType:=xlDatabase, SourceData:="data", Version:= _
+        xlPivotTableVersion15)
+        
+        
+    'Hoja PROVINCIA
+    Provincia1.ChangePivotCache ActiveWorkbook. _
+        PivotCaches.Create(SourceType:=xlDatabase, SourceData:="data", Version:= _
+        xlPivotTableVersion15)
+        
+    Provincia2.ChangePivotCache ActiveWorkbook. _
+        PivotCaches.Create(SourceType:=xlDatabase, SourceData:="data", Version:= _
+        xlPivotTableVersion15)
+        
+    'Hoja LIMA
+    Lima1.ChangePivotCache ActiveWorkbook. _
+        PivotCaches.Create(SourceType:=xlDatabase, SourceData:="data", Version:= _
+        xlPivotTableVersion15)
+        
+    Lima2.ChangePivotCache ActiveWorkbook. _
+        PivotCaches.Create(SourceType:=xlDatabase, SourceData:="data", Version:= _
+        xlPivotTableVersion15)
+       
+    'Para actualizar todas las tablas
+    ActiveWorkbook.RefreshAll
+        
+        '######
+    '########## ##### LUEGO SE ELIGEN LOS FILTROS ####### #########
+        '######
+    
+    On Error Resume Next
+    
+    '--------------- HOJA Comportamiento ----------------------
+     
+    'TABLA ATENCIONES POR CLIENTE
+    
+    'Seleccionar los tipos de servicio
+    For Each pivI In PorCliente.PivotFields("TIPO SERV").PivotItems
+        pivI.Visible = True
+    Next
+    With PorCliente.PivotFields("TIPO SERV")
+        .PivotItems("MP").Visible = False
+        .PivotItems("NETOP").Visible = False
+    End With
+    
+    'Retirar al cliente "Vacío"
+    For Each pivI In PorCliente.PivotFields("NOMBRE CLIENTE").PivotItems
+        pivI.Visible = True
+    Next
+    PorCliente.PivotFields("NOMBRE CLIENTE").PivotItems("(blank)").Visible = False
+    
+    'Seleccionar la fecha de atención
+    PorCliente.PivotFields("FECHA ATENCION").ClearAllFilters
+    PorCliente.PivotFields("FECHA ATENCION").CurrentPage = thedate
+    
+    'TABLA ATENCIONES POR SERVICIO
+    For Each pivI In PorServicio.PivotFields("TIPO SERV").PivotItems
+        pivI.Visible = True
+    Next
+    PorServicio.PivotFields("TIPO SERV").PivotItems("(blank)").Visible = False
+        
+    With PorServicio.PivotFields("FECHA ATENCION")
+        .ClearAllFilters
+        .CurrentPage = thedate
+    End With
+    
+    
+    '------- HOJA GENERAL ------------------------------------
+    
+    'TABLA TK GENERADOS
+    
+    For Each pivI In TkGenerados.PivotFields("TIPO SERV").PivotItems
+        pivI.Visible = True
+    Next
+    With TkGenerados.PivotFields("TIPO SERV")
+        .PivotItems("NETOP").Visible = False
+        .PivotItems("MP").Visible = False
+    End With
+    
+    With TkGenerados.PivotFields("FECHA GENERACIÓN TICKET")
+        .ClearAllFilters
+        .CurrentPage = thedate
+    End With
+    
+    'TABLA TK ATENDIDOS DEL DIA
+    For Each pivI In TkAtendidosDia.PivotFields("TIPO SERV").PivotItems
+        pivI.Visible = True
+    Next
+    With TkAtendidosDia.PivotFields("TIPO SERV")
+        .PivotItems("NETOP").Visible = False
+        .PivotItems("MP").Visible = False
+    End With
+
+        
+    With TkAtendidosDia.PivotFields("FECHA ATENCION")
+        .ClearAllFilters
+        .CurrentPage = thedate
+    End With
+    
+    With TkAtendidosDia.PivotFields("FECHA GENERACIÓN TICKET")
+        .ClearAllFilters
+        .CurrentPage = thedate
+    End With
+    
+    'TABLA TK ATENDIDOS DE DIAS ANTERIORES
+    
+    For Each pivI In TkAtendidosDiasAnt.PivotFields("TIPO SERV").PivotItems
+        pivI.Visible = True
+    Next
+    With TkAtendidosDiasAnt.PivotFields("TIPO SERV")
+        .PivotItems("NETOP").Visible = False
+        .PivotItems("MP").Visible = False
+    End With
+    
+    'Paraseleccionar todos los que fueron generados antes de thedate
+    
+    For Each pivI In TkAtendidosDiasAnt.PivotFields("FECHA GENERACIÓN TICKET").PivotItems
+                pivI.Visible = True
+    Next
+    With TkAtendidosDiasAnt.PivotFields("FECHA GENERACIÓN TICKET")
+        .PivotItems(thedate).Visible = False
+        .PivotItems("(blank)").Visible = False
+    End With
+            
+    'Para seleccionar los atendidos hoy
+    With TkAtendidosDiasAnt.PivotFields("FECHA ATENCION")
+        .ClearAllFilters
+        .CurrentPage = thedate
+    End With
+    
+    'TABLA TK SIN ATENDER
+    For Each pivI In TkSinAtender.pivfields("TIPO SERV").PivotItems
+        pivI.Visible = True
+    Next
+    With TkSinAtender.PivotFields("TIPO SERV")
+        .PivotItems("NETOP").Visible = False
+        .PivotItems("MP").Visible = False
+    End With
+            
+    'Paraseleccionar todos los que serán atendidos después de thedate
+    
+    For Each pivI In TkSinAtender.PivotFields("FECHA ATENCION").PivotItems
+        pivI.Visible = True
+    Next
+    With TkSinAtender.PivotFields("FECHA ATENCION")
+        .PivotItems(thedate).Visible = False
+        .PivotFields("FECHA ATENCION").PivotItems("(blank)").Visible = False
+    End With
+    
+    'Para seleccionar la fecha de generación
+    With TkSinAtender.PivotFields("FECHA GENERACIÓN TICKET")
+        .ClearAllFilters
+        .CurrentPage = thedate
+    End With
+    
+   'TABLA TOTAL DE ATENCIONES
+   
+    For Each pivI In TotalAtenciones.PivotFields("TIPO SERV").PivotItems
+        pivI.Visible = True
+    Next
+    With TotalAtenciones.PivotFields("TIPO SERV")
+        .PivotItems("NETOP").Visible = False
+        .PivotItems("MP").Visible = False
+    End With
+    With TotalAtenciones.PivotFields("FECHA ATENCION")
+        .ClearAllFilters
+        .CurrentPage = thedate
+    End With
+    
+    
+    'TABLA NETOP
+    
+    For Each pivI In NETOP.PivotFields("TIPO SERV").PivotItems
+        If pivI = "NETOP" Then
+            pivI.Visible = True
+        Else
+            pivI.Visible = False
+        End If
+    Next
+    With NETOP.PivotFields("FECHA APERTURA REPARACION")
+        .ClearAllFilters
+        .CurrentPage = thedate
+    End With
+    
+    'TABLA DETALLE SIN ATENDER
+    For Each pivI In DetalleSinAtender.PivotFields("ESTATUS").PivotItems
+        pivI.Visible = False
+    Next
+    With DetalleSinAtender.PivotFields("ESTATUS")
+        .PivotItems("Sin atender").Visible = True
+        .PivotItems("No figura apertura en el DB").Visible = True
+        .PivotItems("Sin asignar").Visible = True
+    End With
+  
+    With DetalleSinAtender.PivotFields("TIPO SERV")
+        .PivotItems("Serv. 1L").Visible = True
+        .PivotItems("Serv. 2L").Visible = True
+        .PivotItems("NETOP").Visible = False
+        .PivotItems("MP").Visible = False
+        .PivotItems("Agentes").Visible = True
+        .PivotItems("Seguridad").Visible = True
+        .PivotItems("Revisión integral").Visible = True
+        .PivotItems("Puesta en marcha").Visible = False
+        .PivotItems("Reinst. Sw").Visible = True
+        .PivotItems("Proy.").Visible = False
+        .PivotItems("S. cliente").Visible = False
+    End With
+        
+    With DetalleSinAtender.PivotFields("FECHA GENERACIÓN TICKET")
+        .ClearAllFilters
+        .CurrentPage = thedate
+    End With
+    
+    For Each pivI In Sheets("GENERAL").PivotTables("DETALLE SIN ATENDER").PivotFields("NOMBRE INGENIERO").PivotItems
+        pivI.Visible = True
+    Next
+    
+    'TABLA PENDIENTES
+    
+    For Each pivI In Pendientes.PivotFields("CIERRE-PENDIENTE").PivotItems
+        pivI.Visible = False
+    Next
+    With Pendientes.PivotFields("CIERRE-PENDIENTE")
+        .PivotItems("Pend. Cliente").Visible = True
+        .PivotItems("Pend. Repuesto").Visible = True
+    End With
+    
+    With Pendientes.PivotFields("FECHA APERTURA REPARACION")
+        .ClearAllFilters
+        .CurrentPage = thedate
+    End With
+    
+    'TABLA ERROR DE DISPOSITIVO
+    
+    Sheets("GENERAL").PivotTables("ERROR DE DISPOSITIVO").PivotFields("CAUSAL INICIAL").CurrentPage = "ERROR DE DISPOSITIVO"
+    
+    Sheets("GENERAL").PivotTables("ERROR DE DISPOSITIVO").PivotFields("FECHA APERTURA REPARACION").CurrentPage = thedate
+    
+    For Each pivI In Sheets("GENERAL").PivotTables("ERROR DE DISPOSITIVO").PivotFields("TIPO SERV").PivotItems
+        pivI.Visible = True
+    Next
+    Sheets("GENERAL").PivotTables("ERROR DE DISPOSITIVO").PivotFields("TIPO SERV").PivotItems("NETOP").Visible = False
+    
+    
+    '------- HOJA PROVINCIA ------------------------------------
+    
+    'TABLA PROVINCIA 1
+    
+    For Each pivI In Provincia1.PivotFields("TIPO SERV").PivotItems
+        pivI.Visible = True
+    Next
+     With Provincia1.PivotFields("TIPO SERV")
+        .PivotItems("NETOP").Visible = False
+        .PivotItems("MP").Visible = False
+    End With
+    
+    Provincia1.PivotFields("LUGAR").CurrentPage = "PROVINCIA"
+        
+    With Provincia1.PivotFields("FECHA ATENCION")
+        .ClearAllFilters
+        .CurrentPage = thedate
+    End With
+    
+    For Each pivI In Provincia1.PivotFields("LIDER").PivotItems
+        pivI.Visible = True
+    Next
+    For Each pivI In Provincia1.PivotFields("MASTER").PivotItems
+        pivI.Visible = True
+    Next
+    With Provincia1.PivotFields("MASTER")
+        .PivotItems("(blank)").Visible = False
+        .PivotItems("#N/A").Visible = False
+        .PivotItems("TECNICO NETOP").Visible = False
+    End With
+    
+    
+    'TABLA PROVINCIA 2
+    
+    For Each pivI In Provincia2.PivotFields("TIPO SERV").PivotItems
+        pivI.Visible = True
+    Next
+    With Provincia2.PivotFields("TIPO SERV")
+        .PivotItems("NETOP").Visible = False
+        .PivotItems("MP").Visible = False
+    End With
+    
+    For Each pivI In Provincia2.PivotFields("LIDER").PivotItems
+        pivI.Visible = True
+    Next
+    For Each pivI In Provincia2.PivotFields("MASTER").PivotItems
+        pivI.Visible = True
+    Next
+    With Provincia2.PivotFields("MASTER")
+        .PivotItems("(blank)").Visible = False
+        .PivotItems("#N/A").Visible = False
+        .PivotItems("TECNICO NETOP").Visible = False
+    End With
+        
+    Provincia2.PivotFields("LUGAR").CurrentPage = "PROVINCIA"
+    
+    With Provincia2.PivotFields("FECHA ATENCION")
+        .ClearAllFilters
+        .CurrentPage = thedate
+    End With
+        
+    '---------------HOJA LIMA ------------
+    
+    'TABLA LIMA 1
+    For Each pivI In Lima1.PivotFields("TIPO SERV").PivotItems
+        pivI.Visible = True
+    Next
+    With Lima1.PivotFields("TIPO SERV")
+        .PivotItems("NETOP").Visible = False
+        .PivotItems("MP").Visible = False
+    End With
+    
+    For Each pivI In Lima1.PivotFields("CSE").PivotItems
+        pivI.Visible = True
+    Next
+    With Lima1.PivotFields("CSE")
+        .PivotItems("(blank)").Visible = False
+        .PivotItems("#N/A").Visible = False
+        .PivotItems("TECNICO NETOP").Visible = False
+    End With
+    
+    Lima1.PivotFields("LUGAR").CurrentPage = "LIMA"
+    
+    With Lima1.PivotFields("FECHA ATENCION")
+        .ClearAllFilters
+        .CurrentPage = thedate
+    End With
+    
+    'TABLA LIMA 2
+    
+    For Each pivI In Lima2.PivotFields("TIPO SERV").PivotItems
+        pivI.Visible = True
+    Next
+    With Lima2.PivotFields("TIPO SERV")
+        .PivotItems("NETOP").Visible = False
+        .PivotItems("MP").Visible = False
+    End With
+    
+    For Each pivI In Lima2.PivotFields("CSE").PivotItems
+        pivI.Visible = True
+    Next
+    With Lima2.PivotFields("CSE")
+        .PivotItems("(blank)").Visible = False
+        .PivotItems("#N/A").Visible = False
+        .PivotItems("TECNICO NETOP").Visible = False
+    End With
+    
+    Lima2.PivotFields("LUGAR").CurrentPage = "LIMA"
+    
+    With Lima2.PivotFields("FECHA ATENCION")
+        .ClearAllFilters
+        .CurrentPage = thedate
+    End With
+
+        '######
+    '########## ##### PARA DAR ALTURA Y ANCHURA A FILAS Y COLUMNAS #######
+        '######
+    
+    '------ Hoja Comportamiento ---------
+    Sheets("Comportamiento").Select
+    
+    'Conceptos
+    Range("F_E_Comportamiento").Offset(0, -1).Select
+    ActiveCell.ColumnWidth = 35
+    
+    '------ Hoja GENERAL ---------
+    Sheets("GENERAL").Select
+    
+    'Conceptos
+    Range("FECHA_EVALUADA").Offset(0, -1).Select
+    ActiveCell.ColumnWidth = 35
+    'NombreEquipo
+    Range("FECHA_EVALUADA").Offset(0, 4).Select
+    ActiveCell.ColumnWidth = 45
+    'HoraEfectiva
+    Range("FECHA_EVALUADA").Offset(0, 7).Select
+    ActiveCell.ColumnWidth = 11
+    'Fecha evaluada
+    Range("FECHA_EVALUADA").Select
+    ActiveCell.ColumnWidth = 32
+    
+    '------ Hoja Pendientes ------
+    Sheets("Pendientes").Select
+    
+    'ESTADO ACTUAL
+    Range("ComentariosReparacion").Select
+    ActiveCell.ColumnWidth = 16
+    'NombreEquipo
+    Range("NombreEquipo").Select
+    ActiveCell.ColumnWidth = 45
+    
+    '------ Hoja Provincia -------
+    Sheets("PROVINCIA").Select
+    
+    'NombreIngeniero
+    Range("NombreEquipo1").Offset(0, -2).Select
+    ActiveCell.ColumnWidth = 40
+    
+End Sub
+
+Sub HojaComportamiento()
+    
+    Set PorCliente = Sheets("Comportamiento").PivotTables("ATENCIONES POR CLIENTE")
+    Set PorServicio = Sheets("Comportamiento").PivotTables("ATENCIONES POR SERVICIO")
+    
+    Sheets("Comportamiento").Select
+    
+    'Definición de ColumFecha
+    Range("ATENCIONES_REALIZADAS_NAC").Select
+    ActiveCell.End(xlToRight).Select
+    columfecha = ActiveCell.Offset(0, 1).Column
+    
+    'Para poner fechas en cada tabla
+    thedate = Sheets("GENERAL").Range("FECHA_EVALUADA").Value
+        
+    Cells(Range("ATENCIONES_REALIZADAS_NAC").Row - 1, columfecha) = thedate
+    Cells(Range("ATENCIONES_REALIZADAS_LIM").Row - 1, columfecha) = thedate
+    Cells(Range("ATENCIONES_REALIZADAS_PROV").Row - 1, columfecha) = thedate
+    Cells(Range("BCP").Row - 1, columfecha) = thedate
+    Cells(Range("AGENTES").Row - 1, columfecha) = thedate
+    
+    'Para ponerle datos - NIVEL NACIONAL
+    Cells(Range("ATENCIONES_REALIZADAS_NAC").Row, columfecha) = Range("AtencionesRealizadas_total")
+    Cells(Range("TK_GENERADOS_NAC").Row, columfecha) = Range("tk_generados_total")
+    Cells(Range("TK_SIN_ATENDER_NAC").Row, columfecha) = Range("tk_sinatender_total")
+    
+    'Para ponerle datos - LIMA
+    Cells(Range("ATENCIONES_REALIZADAS_LIM").Row, columfecha) = Range("AtencionesRealizadas_lima")
+    Cells(Range("TK_GENERADOS_LIM").Row, columfecha) = Range("tk_generados_lima")
+    Cells(Range("TK_SIN_ATENDER_LIM").Row, columfecha) = Range("tk_sinatender_lima")
+    
+    'Para ponerle datos - PROVINCIA
+    Cells(Range("ATENCIONES_REALIZADAS_PROV").Row, columfecha) = Range("AtencionesRealizadas_provincia")
+    Cells(Range("TK_GENERADOS_PROV").Row, columfecha) = Range("tk_generados_provincia")
+    Cells(Range("TK_SIN_ATENDER_PROV").Row, columfecha) = Range("tk_sinatender_provincia")
+    
+    'Para ponerle datos - ATENCIONES POR CLIENTE
+    
+    For Each rng In Range(Range("BCP"), Range("IBK"))
+        Cells(rng.Row, columfecha) = Cells(rng.Row, rng.Offset(0, -1).Column).Value
+    Next
+    
+    'Para ponerle datos - ATENCIONES POR SERVICIO
+    
+    For Each rng In Range(Range("AGENTES"), Range("SEG_L"))
+        Cells(rng.Row, columfecha) = Cells(rng.Row, rng.Offset(0, -1).Column).Value
+    Next
+    
+    Cells(1, columfecha).Select
+    ActiveCell.Columns.Hidden = False
+    
+End Sub

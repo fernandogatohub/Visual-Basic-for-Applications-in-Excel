@@ -1,0 +1,122 @@
+Option Base 1
+'Declarar variables
+
+''Arrays
+Public source_arr() As Variant
+Public output_arr() As Variant
+Public min_limits_arr() As Variant
+Public max_limits_arr() As Variant
+Public rngs_arr() As Variant
+
+''Strings
+Public data_sheet As String
+Public limits_sheet As String
+Public rng As String
+
+''Integers
+Public i As Integer
+Public j As Integer
+Public k As Integer
+
+''Ranges
+Public sources_rng As Range
+Public outputs_rng As Range
+Public rngs_rng As Range
+Public min_limits_rng As Range
+Public max_limits_rng As Range
+Public sources_hdr_rng As Range
+Public outputs_hdr_rng As Range
+Public rngs_hdr_rng As Range
+
+''Variants
+Public element As Variant
+Public source As Variant
+Public test As Variant
+
+Sub assign_variables_values_percentage()
+    'User assigned values
+    data_sheet = "Data"
+    limits_sheet = "complementos"
+    Set sources_hdr_rng = Sheets(data_sheet).Range("sources_hdr_rng1")
+    Set outputs_hdr_rng = Sheets(data_sheet).Range("outputs_hdr_rng1")
+    Set rngs_hdr_rng = Sheets(limits_sheet).Range("rngs_hdr_rng1")
+End Sub
+
+Sub assign_variables_values_absolute()
+    'User assigned values
+    data_sheet = "Data"
+    limits_sheet = "complementos"
+    Set sources_hdr_rng = Sheets(data_sheet).Range("sources_hdr_rng")
+    Set outputs_hdr_rng = Sheets(data_sheet).Range("outputs_hdr_rng")
+    Set rngs_hdr_rng = Sheets(limits_sheet).Range("rngs_hdr_rng")
+End Sub
+Sub get_datasheet_values()
+    'Set ranges
+    Set sources_rng = Range(sources_hdr_rng(1, k).Offset(1, 0), sources_hdr_rng(1, k).End(xlDown))
+    Set outputs_rng = Range(outputs_hdr_rng(1, k).Offset(1, 0), outputs_hdr_rng(1, k).End(xlDown))
+    'Move values from ranges to arrays
+    source_arr = sources_rng
+    output_arr = outputs_rng
+End Sub
+
+Sub get_limitssheet_values()
+    'Set ranges
+    Set rngs_rng = Range(rngs_hdr_rng(1, 1).Offset(1, 0), rngs_hdr_rng(1, 1).End(xlDown))
+    Set min_limits_rng = Range(rngs_hdr_rng(1, 2).Offset(1, 0), rngs_hdr_rng(1, 2).End(xlDown))
+    Set max_limits_rng = Range(rngs_hdr_rng(1, 3).Offset(1, 0), rngs_hdr_rng(1, 3).End(xlDown))
+    'Move values from ranges to arrays
+    rngs_arr = rngs_rng
+    min_limits_arr = min_limits_rng
+    max_limits_arr = max_limits_rng
+End Sub
+
+Sub calculate_rng(source As Variant)
+    j = 0
+    For Each element In rngs_arr
+        j = j + 1
+        ' Beginning of personalized snippet
+        If source = "null" Then
+            rng = "Sin regla"
+            Exit For
+        ElseIf source = 0 Then
+            rng = 0
+            Exit For
+        ' End of personalized snippet
+        ElseIf ((source >= min_limits_arr(j, 1)) And (source < max_limits_arr(j, 1))) Then
+            rng = element
+            Exit For
+        End If
+    Next element
+End Sub
+
+Sub fill_rngs()
+    i = 0
+    Call get_datasheet_values
+    For Each source In source_arr
+        i = i + 1
+        Call calculate_rng(source)
+        output_arr(i, 1) = rng
+    Next source
+    outputs_rng.Value = output_arr
+End Sub
+
+Sub interate_percentage()
+    Call assign_variables_values_percentage
+    Call get_limitssheet_values
+    For k = 1 To sources_hdr_rng.Columns.Count
+        Call fill_rngs
+    Next k
+End Sub
+
+Sub interate_absolute()
+    Call assign_variables_values_absolute
+    Call get_limitssheet_values
+    For k = 1 To sources_hdr_rng.Columns.Count
+        Call fill_rngs
+    Next k
+End Sub
+
+Sub call_iterates()
+    Call interate_percentage
+    Call interate_absolute
+End Sub
